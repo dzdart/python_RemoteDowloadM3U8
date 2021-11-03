@@ -14,7 +14,8 @@ import requests
 class L_json:
     def __init__(self):
         self.data_path = os.getcwd() + '\\templates\\data.json'
-        self.data = self.data_read()
+        self.data = {}
+        self.data_read()
 
 
     def data_read(self):
