@@ -4,7 +4,9 @@ import os
 import random
 import string
 import threading
+import time
 from multiprocessing import cpu_count
+from shutil import rmtree
 
 import requests
 
@@ -12,8 +14,8 @@ import requests
 class L_json:
     def __init__(self):
         self.data_path = os.getcwd() + '\\templates\\data.json'
-        self.data = {}
-        self.data_read()
+        self.data = self.data_read()
+
 
     def data_read(self):
         data = open(self.data_path, 'rb').read()
@@ -70,6 +72,7 @@ class DM3U8:
     def __init__(self, id: str, url: str, save_dir: str, save_name: str):
         self.url = url
         self.save_dir = save_dir
+        self.tmp_dir = ''
         self.save_name = save_name
         self.id = id
         self.ts_path_list = []
@@ -95,11 +98,16 @@ class DM3U8:
         for item in tmp_data:
             if item.find('.ts') > 0:
                 self.m3u8_data.append(self.father_url + item)
+        L_json().up(task_id=self.id,save_progress=str(len(self.m3u8_data)))
 
     def d_ts(self, task_list):
         error_list = []
         for item in task_list:
-            save_path = self.save_dir + '\\' + str(item).split('/')[-1]
+            self.tmp_dir = self.save_dir + '\\' + str(self.save_name)
+            if not os.path.exists(self.tmp_dir):
+                os.makedirs(self.tmp_dir)
+            save_path = self.save_dir + '\\' + str(self.save_name) + '\\' + str(item).split('/')[-1]
+            print(save_path)
             try:
                 tmp_data = requests.get(item, timeout=20).content
                 with open(save_path, 'wb') as f:
@@ -107,7 +115,7 @@ class DM3U8:
                     f.flush()
                     f.close()
                     self.ts_path_list.append(save_path)
-                print(str(item).split('/')[-1], '下载完成\n')
+                # print(str(item).split('/')[-1], '下载完成\n')
             except requests.exceptions.RequestException:
                 error_list.append(item)
         if len(error_list) > 0:
@@ -123,15 +131,19 @@ class DM3U8:
         for item in ts_list:
             ts_command = ts_command + str(item) + '|'
         ts_command = ts_command + '\"'
-        mp4_path = self.save_dir + '\\' + str(self.id) + str(self.save_name)+'.mp4'
+        mp4_path = self.save_dir + '\\' + str(self.id) + str(self.save_name) + '.mp4'
         if os.path.exists(mp4_path):
             os.remove(mp4_path)
         cmd = ffmpeg_path + ' -i ' + ts_command + ' -c copy ' + mp4_path
         os.system(cmd)
         for item in ts_list:
             os.remove(item)
-        L_json().up(task_id=str(self.id), save_path=mp4_path,save_bool='True', save_progress='100')
+        L_json().up(task_id=str(self.id), save_path=mp4_path, save_bool='True', save_progress='100')
         print('合并完成')
+
+    def readonly_handler(func, path, execinfo):
+        os.chmod(path, os.stat.S_IWRITE)
+        func(path)
 
     def start_thread(self):
         thread_list = []
@@ -152,6 +164,32 @@ class DM3U8:
         for t in thread_list:
             t.join()
         self.make_mp4()
+        time.sleep(1)
+        rmtree(self.tmp_dir, onerror=self.readonly_handler)
+
+
+class conf:
+    def __init__(self):
+        self.conf_data = {}
+        self.red()
+
+    def red(self):
+        self.conf_data = json.loads(open('config.json', 'r').read())
+
+    def up(self, *args):
+        """
+
+        :param args: 每一对变量使用=连接
+        :return:
+        """
+        for item in args:
+            item = str(item).split('=')
+            for item1 in self.conf_data.keys():
+                if item[0] == str(item1):
+                    self.conf_data[item1] = item[1]
+        tmp_data = json.dumps(self.conf_data)
+        print(tmp_data)
+        open('config.json', 'w+').write(tmp_data)
 
 
 def GetID(length=10):

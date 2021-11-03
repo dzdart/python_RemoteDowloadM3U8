@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <title>创建下载任务</title>
@@ -9,7 +9,7 @@
 <form action="/d" method="post">
     m3u8链接：<input type="text" name="m3u8_url" placeholder="输入m3u8链接">&nbsp;&nbsp;&nbsp;&nbsp;
     文件名：<input type="text" name="save_name" placeholder="输入文件存储名">&nbsp;&nbsp;&nbsp;&nbsp;
-    存储路径：.\<input type="text" name="save_dir" placeholder="输入文件存储路径">&nbsp;&nbsp;&nbsp;&nbsp;
+    存储路径：{{work_dir}}<input type="text" name="save_dir" placeholder="{{last_save}}">&nbsp;&nbsp;&nbsp;&nbsp;
     <input type="submit" value="提交">
 </form>
 </br>
@@ -20,6 +20,7 @@
     查询ID：<input type="text" name='id' placeholder="输入之前的查询ID">&nbsp;&nbsp;&nbsp;&nbsp;
     <input type="submit" value="查询">
 </form>
-
+</br>
+{{task_list|safe}}
 </body>
 </html>
