@@ -4,9 +4,9 @@ import json
 import os
 import threading
 
-from flask import Flask, render_template, request, make_response, send_from_directory
+from flask import Flask, render_template, request, make_response, send_from_directory, current_app
 
-from Web.Public_funcation import L_json, DM3U8, GetID, conf
+from Web.Public_funcation import L_json, DM3U8, GetID, conf, CreateID
 
 # ————————————————————#
 work_dir = conf().conf_data['work_dir']
@@ -46,14 +46,20 @@ task_list = []
 
 @app.route('/')
 def index():
-    tmp_task_list = ''
+    index_=0;
+    tmp_task_list = '' 
     data = L_json().data
     for key in data.keys():
+        index_ +=1;
         tmp_task_list += render_template('task_enum.html',
-                                         name=json.loads(data[key])['name'],
-                                         url='/dd?id=' + key,
+                                         index_num=str(index_),
+                                         video_name=json.loads(data[key])['name'],
+                                         download_url='/dd?id=' + key,
+                                         video_id=str(key),
+
                                          )
-    ret = render_template('download.html', work_dir=work_dir, task_list=tmp_task_list, last_save=last_dir)
+    # ret = render_template('download.html', work_dir=work_dir, task_list=tmp_task_list, last_save=last_dir)
+    ret = render_template('index.html', work_dir=work_dir, video_list=tmp_task_list, last_save=last_dir)
     return ret
 
 
@@ -110,6 +116,26 @@ def get_file():
     except Exception as e:
         ret = '404 not found:请求的文件不存在：请主动检查数据库。'
         return ret
+
+
+@app.route('/test', methods=['POST'])
+def check_info():
+    url = request.form.get('url')
+    save_name = request.form.get('save_name')
+    save_dir = request.form.get('save_dir')
+    newId=CreateID(save_name)
+    print(newId)
+    ret = json.dumps({'id': newId})
+    rst = make_response(ret)
+    rst.headers['Access-Control-Allow-Origin'] = '*'
+    rst.headers['Access-Control-Allow-Methods'] = 'GET'
+    rst.status = '200'
+    return rst
+
+
+@app.route('/favicon.ico')
+def get_ico():
+    return current_app.send_static_file('img/favicon.ico')
 
 
 if __name__ == "__main__":

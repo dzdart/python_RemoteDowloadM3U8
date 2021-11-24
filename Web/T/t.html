@@ -1,0 +1,42 @@
+<script src="./t.js"></script>
+<style type="text/css">
+body{background-color: #222}
+.videolist { position:relative; float:left; width:500px; height:300px; margin-right:50px; margin-top:15px; margin-bottom:30px; }
+.videolist:hover{ cursor: pointer; }
+.videoed { display:none; width:50px; height:50px; position: absolute; left:45%; top:45%; z-index:99; border-radius:100%; }
+.videos{ display:none; border: 1px solid #080808; position:fixed; left:50%; top:50%; margin-left:-320px; margin-top:-210px; z-index:100; width:640px; height:360px; }
+.vclose { position:absolute;right:1%; top:1%; border-radius:100%; cursor: pointer;z-index:99; }
+.showtips{background:#ff0000; border: 1px solid #080808; position:fixed; left:50%; top:50%; margin-left:-320px; margin-top:-210px; z-index:100; width:320px; height:180px;}
+
+</style>
+
+<form name="dynamic" method="get">
+    <span>Enter Your Credit Card Number:</span>
+    <input type="text" id="CCN" name="CCN" value="CCN"/>
+    <input type="button" value="submit" onclick="showCard()"/>
+    <input type="button" value="submit" onclick="send()"/>
+    <input type="button" value="Play" onclick="show_player()"/>
+    <input type="button" value="show_tips" onclick="show_tips()"/>
+</form>
+<p>Verify your Credit Card Number:
+    <span id="mycreditcardnumber">0000-00-0000-00 </span>
+</p>
+
+<div id="video_player" class="videos">
+    <img onClick="show_player()" class="vclose" src="../static/img/gb.png" width="25" height="25"/>
+
+    <video controls width="640px" height="420" src="http://127.0.0.1:8090/dd?id=61c93uVBfU">
+
+    </video>
+</div>
+
+<div class="showtips">
+    一个小提示
+</div>
+
+
+
+
+
+
+

@@ -1,3 +1,4 @@
+import base64
 import json
 import math
 import os
@@ -6,9 +7,11 @@ import string
 import threading
 import time
 from multiprocessing import cpu_count
+from moviepy.editor import VideoFileClip
 from shutil import rmtree
 
 import requests
+
 
 
 class L_json:
@@ -17,11 +20,9 @@ class L_json:
         self.data = {}
         self.data_read()
 
-
     def data_read(self):
         data = open(self.data_path, 'rb').read()
         if not data == b'':
-            # data = base64.b64decode(data).decode('utf-8')
             self.data = json.loads(data)
         else:
             print('表空！')
@@ -30,7 +31,6 @@ class L_json:
     def data_write(self):
         tmp_data = json.dumps(self.data)
         tmp_data = tmp_data.encode('utf-8')
-        # tmp_data = base64.b64encode(tmp_data)
         with open(self.data_path, 'wb+') as f:
             f.write(tmp_data)
 
@@ -84,6 +84,22 @@ class DM3U8:
         self.d_m3()
         self.start_thread()
 
+    def get_local_proxy(self):
+        """
+        返回本机的代理地址
+        """
+        import winreg
+        location = r'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings'
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, location)
+        try:
+            proxy_url = str(winreg.QueryValueEx(key, 'AutoConfigURL')[0])
+            proxy_url = proxy_url[0:proxy_url.find('pac') - 1]
+        except WindowsError:
+            print('本地代理未启动')
+            return ''
+        else:
+            return proxy_url
+
     def check_path(self):
         """
         检查存储目录是否存在，不存在就创建
@@ -95,22 +111,48 @@ class DM3U8:
         self.father_url = self.url.replace(self.url.split('/')[-1], '')
 
     def d_m3(self):
-        tmp_data = requests.get(self.url).content.decode('utf-8').split('\n')
+        heard = {
+            'Accept-Language': 'zh-CN',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE'
+        }
+        # 获取本机代理地址
+        proxy = {
+            "http": self.get_local_proxy(),
+            "https": self.get_local_proxy(),
+        }
+        requests.packages.urllib3.disable_warnings()
+        tmp_data = requests.get(self.url, headers=heard, proxies=proxy,verify=False).content.decode('utf-8').split('\n')
+        # tmp_data1 = requests.get(self.url, verify=False).content.decode('utf-8')
         for item in tmp_data:
             if item.find('.ts') > 0:
-                self.m3u8_data.append(self.father_url + item)
-        L_json().up(task_id=self.id,save_progress=str(len(self.m3u8_data)))
+                if item.find('https://') or item.find('http://'):
+                    self.m3u8_data.append(self.father_url + item)
+                else:
+                    self.m3u8_data.append(self.father_url + item)
+        print(self.m3u8_data)
+        L_json().up(task_id=self.id, save_progress=str(len(self.m3u8_data)))
 
     def d_ts(self, task_list):
+        heard = {
+            'Accept-Language': 'zh-CN',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE'
+        }
+        # 获取本机代理地址
+        proxy = {
+            "http": self.get_local_proxy(),
+            "https": self.get_local_proxy(),
+        }
         error_list = []
         for item in task_list:
-            self.tmp_dir = self.save_dir + '\\' + str(self.save_name)
+            if item.find('m3u8\r'):
+                item = str(item).replace('.m3u8\r', '.m3u8')
+            self.tmp_dir = os.sep.join([self.save_dir, str(self.save_name)])
             if not os.path.exists(self.tmp_dir):
                 os.makedirs(self.tmp_dir)
-            save_path = self.save_dir + '\\' + str(self.save_name) + '\\' + str(item).split('/')[-1]
-            print(save_path)
+            save_path = os.sep.join([self.save_dir, self.save_name, str(item).split('/')[-1]])
             try:
-                tmp_data = requests.get(item, timeout=20).content
+                requests.packages.urllib3.disable_warnings()
+                tmp_data = requests.get(item, headers=heard, proxies=proxy,verify=False, timeout=20).content
                 with open(save_path, 'wb') as f:
                     f.write(tmp_data)
                     f.flush()
@@ -207,3 +249,50 @@ def GetID(length=10):
     # 生成密码
     ID = ''.join([i for i in slcChar])
     return ID
+
+
+def CreateID(name: str):
+    new_id = base64.b64encode(name.encode())
+    return new_id.decode()
+
+
+class FileCheck():
+    def file_size(self, filename):
+        u"""
+        获取文件大小（M: 兆）
+        """
+        file_byte = os.path.getsize(filename)
+        return self.sizeConvert(file_byte)
+
+    def file_times(self, filename):
+        u"""
+        获取视频时长（s:秒）
+        """
+        clip = VideoFileClip(filename)
+        file_time = self.timeConvert(clip.duration)
+        return file_time
+
+    def sizeConvert(self, size):  # 单位换算
+        K, M, G = 1024, 1024 ** 2, 1024 ** 3
+        if size >= G:
+            return str(size / G) + 'G Bytes'
+        elif size >= M:
+            return str(size / M) + 'M Bytes'
+        elif size >= K:
+            return str(size / K) + 'K Bytes'
+        else:
+            return str(size) + 'Bytes'
+
+    def timeConvert(self, size):  # 单位换算
+        M, H = 60, 60 ** 2
+        if size < M:
+            return str(size) + u'秒'
+        if size < H:
+            return u'%s分钟%s秒' % (int(size / M), int(size % M))
+        else:
+            hour = int(size / H)
+            mine = int(size % H / M)
+            second = int(size % H % M)
+            tim_srt = u'%s小时%s分钟%s秒' % (hour, mine, second)
+            return tim_srt
+
